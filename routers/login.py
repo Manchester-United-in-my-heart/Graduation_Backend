@@ -39,4 +39,6 @@ async def get_current_user_by_token(
             raise HTTPException(status_code=400, detail="User not found")
         return user
     except Exception as e:
-        raise HTTPException(status_code=400, detail=e)
+        return {
+            "error": payload
+        }

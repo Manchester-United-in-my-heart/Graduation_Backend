@@ -21,10 +21,9 @@ async def get_published_books(db: Session = Depends(get_db)):
             epub_file_name = project.name + ".epub"
             is_published_yet = s3_utils.check_if_file_exists(published_books_bucket_name, epub_file_name)
             if is_published_yet:
-                return_data.append({
-                    "project_id": project.id,
-                    "project_name": project.name,
-                })
+                return_data.append(
+                    project
+                )
     return {
         "published_books": return_data
     }
@@ -39,13 +38,10 @@ async def get_published_book(project_id: int, db: Session = Depends(get_db)):
     published_books_bucket_name = os.getenv("PUBLISHED_BUCKET_NAME")
     epub_file_name = project.name + ".epub"
     is_published_yet = s3_utils.check_if_file_exists(published_books_bucket_name, epub_file_name)
+    project.epub_download_link = s3_utils.get_s3_url(published_books_bucket_name, epub_file_name)
     if is_published_yet:
         return {
-            "project_id": project.id,
-            "project_name": project.name,
-            "epub_download_link": s3_utils.get_s3_url(published_books_bucket_name, epub_file_name),
-            "project_description": project.description,
-            "project_belongs_to": project.username
+            "published_book": project
         }
     return {
         "detail": "Project is not published yet"

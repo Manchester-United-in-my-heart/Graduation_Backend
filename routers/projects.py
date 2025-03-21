@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from typing import Annotated
+from pydantic import BaseModel
 from schemas import ProjectBase, User, PageCreate
 from sqlalchemy.orm import Session
 import crud
@@ -18,6 +19,12 @@ import base64
 import subprocess
 
 load_dotenv() 
+
+class ProjectCreateSchema(BaseModel):
+    name: str
+    description: str
+    is_public: bool
+    is_allow_to_train: bool
 
 
 router = APIRouter()
@@ -44,18 +51,15 @@ def get_current_user_project_by_id(project_id: int, db: Session = Depends(get_db
 
 @router.post("/", tags=["projects"])
 # a function that creates a project for the user coming with the session
-async def create_project(name: str, 
-                         description: str, 
-                         is_public: bool = False, 
-                         is_allow_to_train: bool = False, 
-                         cover_image: UploadFile = File(...), 
+async def create_project(name : str = Form(...), description : str = Form(...), is_public : bool = Form(...), is_allow_to_train : bool = Form(...),
+                         cover_image: UploadFile = File(...),
                          db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     image_content = await cover_image.read()
-    imge_in_base64 = base64.b64encode(image_content).decode('utf-8')
+    image_in_base64 = base64.b64encode(image_content).decode('utf-8')
     
     project = ProjectBase(name=name, description=description, is_public=is_public, is_allow_to_train=is_allow_to_train, pdf_download_link="", epub_download_link="")
 
-    return crud.create_project(db=db, username=current_user.username, project=project, cover_image=imge_in_base64)
+    return crud.create_project(db=db, username=current_user.username, project=project, cover_image=image_in_base64)
 
 @router.post("/{project_id}/upload_images", tags=["projects"])
 async def upload_images(project_id: int, allow_to_train: bool = False, db: Session = Depends(get_db) , files: list[UploadFile] = File(...)):
@@ -103,7 +107,7 @@ async def upload_images(project_id: int, allow_to_train: bool = False, db: Sessi
 
     return {"filenames": file_names, "filecontents": file_contents}
 
-@router.post("/{project_id}/request_epub_file", tags=["projects"])
+@router.get("/{project_id}/request_epub_file", tags=["projects"])
 async def request_epub_file(project_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     project = crud.get_project_by_id(db, project_id)
     image_links = crud.get_pages_by_project_id(db, project_id)
@@ -177,8 +181,16 @@ async def request_epub_file(project_id: int, db: Session = Depends(get_db), curr
                 html_content += f"<p>{element_text}</p>"
                 if 'data' not in current_section_content:
                     current_section_content['data'] = ""
-                current_section_content['data'] += f"<p>{element_text}</p>"
-        
+                
+                # check if the first char in element_text is a captial letter. If it is, then it is a new paragraph, else it is a continuation of the previous paragraph
+                if current_section_content['data'] and element_text[0].isupper():
+                    current_section_content['data'] += f"<p>{element_text}</p>"
+                else:
+                    last_closing_p_index = current_section_content['data'].rfind("</p>")
+                    if last_closing_p_index != -1:
+                        current_section_content["data"] = current_section_content['data'][:last_closing_p_index] + current_section_content['data'][last_closing_p_index+4:]
+                    current_section_content['data'] += f" {element_text}</p>"
+                    
     html_content_in_array.append(current_section_content)
     
     # write the html content array to a file using json.dumps
@@ -211,9 +223,10 @@ async def request_epub_file(project_id: int, db: Session = Depends(get_db), curr
 
     s3_utils.upload_file(open("my-first-ebook.epub", "rb"), published_bucket_name, object_name=project.name + ".epub")
     
+    download_link = s3_utils.get_s3_url(published_bucket_name, project.name + ".epub")
+    
     return {
-        "html_content": html_content,
-        "html_content_in_array": html_content_in_array
+        "download_link": download_link
     }
 
 
