@@ -3,6 +3,7 @@ import boto3
 from botocore.exceptions import ClientError
 import os
 import time
+import datetime
 
 def upload_file(data, bucket, object_name):
     s3_client = boto3.client('s3')
@@ -166,3 +167,101 @@ def stop_ec2_instance(instance_id):
         logging.error(e)
         return False
     return True
+
+def count_number_of_updated_published_books(bucket):
+    s3_client = boto3.client('s3')
+    response = s3_client.list_objects_v2(Bucket=bucket)
+
+    projects = []
+
+    if "Contents" in response:
+        for obj in response["Contents"]:
+            projects.append(obj["LastModified"])  # Timezone-aware datetime
+
+    # Use timezone-aware datetime for calculations
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    last_24_hours = 0
+    last_48_hours = 0
+    last_72_hours = 0
+    last_96_hours = 0
+    last_120_hours = 0
+    
+    last_7_days = 0
+    last_14_days = 0
+    last_21_days = 0
+    last_28_days = 0
+    last_35_days = 0
+    
+    last_1_month = 0
+    last_2_months = 0
+    last_3_months = 0
+    last_4_months = 0
+    last_5_months = 0
+
+    for time in projects:
+        # Calculate the time difference
+        time_difference = now - time  # Both are timezone-aware
+        days_difference = time_difference.days
+        
+        if days_difference <= 0:
+            last_24_hours += 1
+        if days_difference <= 1:
+            last_48_hours += 1
+        if days_difference <= 2:
+            last_72_hours += 1
+        if days_difference <= 3:
+            last_96_hours += 1
+        if days_difference <= 4:
+            last_120_hours += 1
+        if days_difference <= 7:
+            last_7_days += 1
+        if days_difference <= 14:
+            last_14_days += 1
+        if days_difference <= 21:
+            last_21_days += 1
+        if days_difference <= 28:
+            last_28_days += 1
+        if days_difference <= 35:
+            last_35_days += 1
+        if days_difference <= 30:
+            last_1_month += 1
+        if days_difference <= 60:
+            last_2_months += 1
+        if days_difference <= 90:
+            last_3_months += 1
+        if days_difference <= 120:
+            last_4_months += 1
+        if days_difference <= 150:
+            last_5_months += 1
+            
+    data_in_days = [
+        last_24_hours,
+        last_48_hours - last_24_hours,
+        last_72_hours - last_48_hours,
+        last_96_hours - last_72_hours,
+        last_120_hours - last_96_hours,
+    ]
+
+    data_in_weeks = [
+        last_7_days,
+        last_14_days - last_7_days,
+        last_21_days - last_14_days,
+        last_28_days - last_21_days,
+        last_35_days - last_28_days,
+    ]
+
+    data_in_months = [
+        last_1_month,
+        last_2_months - last_1_month,
+        last_3_months - last_2_months,
+        last_4_months - last_3_months,
+        last_5_months - last_4_months,
+    ]
+             
+    
+    return {
+        "data_by_days": data_in_days,
+        "data_by_weeks": data_in_weeks,
+        "data_by_months": data_in_months
+    }

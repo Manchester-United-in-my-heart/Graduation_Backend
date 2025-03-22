@@ -30,6 +30,7 @@ class User(Base):
     password = Column(String(200), nullable=False)
     email = Column(String(50), nullable=True)
     role = Column(Enum(RoleEnum), nullable=False)
+    date_created = Column(DateTime, default=datetime.datetime.utcnow)
     
 class Project(Base):
     __tablename__ = "projects"
@@ -54,6 +55,7 @@ class Page(Base):
     page_number = Column(Integer, nullable=False)
     image_link = Column(String(500), nullable=False)
     is_used_to_train = Column(Boolean, default=False, nullable=False)
+    date_created = Column(DateTime, default=datetime.datetime.utcnow)
 
 class Element(Base):
     __tablename__ = "elements"

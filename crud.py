@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 import models, schemas
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+import datetime
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.User).offset(skip).limit(limit).all()
@@ -82,8 +83,151 @@ def get_all_pages_in_project_allow_to_train(db: Session):
             file_name_without_extension = page.image_link.split(".")[0]
             page_data["label_file"] = f"{file_name_without_extension}.txt"
             return_data.append(page_data)
+            page.is_used_to_train = True
+            db.commit()
     return return_data
 
+def count_number_of_newly_created_users(db: Session):
+    # last 24 hours
+    last_24_hours = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=1)).count()
+    last_48_hours = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=2)).count()
+    last_72_hours = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=3)).count()
+    last_96_hours = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=4)).count()
+    last_120_hours = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=5)).count()
+    data_by_days = [
+        last_24_hours,
+        last_48_hours - last_24_hours,
+        last_72_hours - last_48_hours,
+        last_96_hours - last_72_hours,
+        last_120_hours - last_96_hours
+    ]
+    
+    # last 7 days
+    last_7_days = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=7)).count()
+    last_14_days = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=14)).count()
+    last_21_days = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=21)).count()
+    last_28_days = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=28)).count()
+    last_35_days = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=35)).count()
+    data_by_weeks = [
+        last_7_days,
+        last_14_days - last_7_days,
+        last_21_days - last_14_days,
+        last_28_days - last_21_days,
+        last_35_days - last_28_days
+    ]
+    # last 30 days
+    last_30_days = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=30)).count()
+    last_60_days = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=60)).count()
+    last_90_days = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=90)).count()
+    last_120_days = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=120)).count()
+    last_150_days = db.query(models.User).filter(models.User.date_created >= datetime.datetime.now() - datetime.timedelta(days=150)).count()
+    data_by_months = [
+        last_30_days,
+        last_60_days - last_30_days,
+        last_90_days - last_60_days,
+        last_120_days - last_90_days,
+        last_150_days - last_120_days
+    ]
+    return {
+        "data_by_days": data_by_days,
+        "data_by_weeks": data_by_weeks,
+        "data_by_months": data_by_months
+    }
+
+def count_number_of_newly_created_projects(db: Session):
+    # last 24 hours
+    last_24_hours = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=1)).count()
+    last_48_hours = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=2)).count()
+    last_72_hours = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=3)).count()
+    last_96_hours = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=4)).count()
+    last_120_hours = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=5)).count()
+    data_by_days = [
+        last_24_hours,
+        last_48_hours - last_24_hours,
+        last_72_hours - last_48_hours,
+        last_96_hours - last_72_hours,
+        last_120_hours - last_96_hours
+    ]
+    
+    # last 7 days
+    last_7_days = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=7)).count()
+    last_14_days = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=14)).count()
+    last_21_days = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=21)).count()
+    last_28_days = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=28)).count()
+    last_35_days = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=35)).count()
+    data_by_weeks = [
+        last_7_days,
+        last_14_days - last_7_days,
+        last_21_days - last_14_days,
+        last_28_days - last_21_days,
+        last_35_days - last_28_days
+    ]
+    # last 30 days
+    last_30_days = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=30)).count()
+    last_60_days = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=60)).count()
+    last_90_days = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=90)).count()
+    last_120_days = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=120)).count()
+    last_150_days = db.query(models.Project).filter(models.Project.date_created >= datetime.datetime.now() - datetime.timedelta(days=150)).count()
+    data_by_months = [
+        last_30_days,
+        last_60_days - last_30_days,
+        last_90_days - last_60_days,
+        last_120_days - last_90_days,
+        last_150_days - last_120_days
+    ]
+    return {
+        "data_by_days": data_by_days,
+        "data_by_weeks": data_by_weeks,
+        "data_by_months": data_by_months
+    }
+    
+def count_number_of_newly_created_pages(db: Session):
+    # last 24 hours
+    last_24_hours = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=1)).count()
+    last_48_hours = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=2)).count()
+    last_72_hours = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=3)).count()
+    last_96_hours = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=4)).count()
+    last_120_hours = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=5)).count()
+    data_by_days = [
+        last_24_hours,
+        last_48_hours - last_24_hours,
+        last_72_hours - last_48_hours,
+        last_96_hours - last_72_hours,
+        last_120_hours - last_96_hours
+    ]
+    
+    # last 7 days
+    last_7_days = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=7)).count()
+    last_14_days = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=14)).count()
+    last_21_days = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=21)).count()
+    last_28_days = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=28)).count()
+    last_35_days = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=35)).count()
+    data_by_weeks = [
+        last_7_days,
+        last_14_days - last_7_days,
+        last_21_days - last_14_days,
+        last_28_days - last_21_days,
+        last_35_days - last_28_days
+    ]
+    # last 30 days
+    last_30_days = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=30)).count()
+    last_60_days = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=60)).count()
+    last_90_days = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=90)).count()
+    last_120_days = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=120)).count()
+    last_150_days = db.query(models.Page).filter(models.Page.date_created >= datetime.datetime.now() - datetime.timedelta(days=150)).count()
+    data_by_months = [
+        last_30_days,
+        last_60_days - last_30_days,
+        last_90_days - last_60_days,
+        last_120_days - last_90_days,
+        last_150_days - last_120_days
+    ]
+    return {
+        "data_by_days": data_by_days,
+        "data_by_weeks": data_by_weeks,
+        "data_by_months": data_by_months
+    }
+        
 async def get_all_pages_in_project_allow_to_train_async(db: AsyncSession):
     projects_allow_to_train = await db.execute(select(models.Project).filter(models.Project.is_allow_to_train == True))
     return_data = []

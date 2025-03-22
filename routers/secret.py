@@ -29,7 +29,7 @@ async def get_secret(
         "message": response.json()
     }
 
-@router.get("/secret/train/")
+@router.get("/train")
 async def start_training(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user),
@@ -153,17 +153,37 @@ async def replace_model(
         "message": "Model has been replaced"
     }
 
-@router.get("/secret/otp/")
-async def get_otp(
+@router.get("/secret/dashboard_data")
+async def get_dashboard_data(
     db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
 ):
-    return get_qr_code() 
-
-@router.post("/secret/otp/verify/")
-async def check_otp(
-    otp: str,
-    db: Session = Depends(get_db),
-):
+    if current_user.role.value != "admin":
+        return {
+            "detail": "You are not authorized to see the dashboard data"
+        }
     return {
-        "is_verified": verify_otp(otp)
+        "message": "Nothing"
+    }
+    
+
+@router.get("/get_dashboard_data")
+async def test(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    if current_user.role.value != "admin":
+        return {
+            "detail": "You are not authorized to see this message"
+        }
+
+    users_data = crud.count_number_of_newly_created_users(db)
+    projects_data = crud.count_number_of_newly_created_projects(db)
+    pages_data = crud.count_number_of_newly_created_pages(db)
+    published_data = s3_utils.count_number_of_updated_published_books(os.getenv("PUBLISHED_BUCKET_NAME"))
+    return {
+        "users": users_data,
+        "projects": projects_data,
+        "pages": pages_data,
+        "published_books": published_data
     }
