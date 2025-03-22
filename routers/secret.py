@@ -8,6 +8,7 @@ import os
 from dotenv import load_dotenv
 import requests
 import json
+from otp_utils import get_otp_auth_string, get_qr_code, verify_otp
 
 load_dotenv()
  
@@ -150,4 +151,19 @@ async def replace_model(
 
     return {
         "message": "Model has been replaced"
+    }
+
+@router.get("/secret/otp/")
+async def get_otp(
+    db: Session = Depends(get_db),
+):
+    return get_qr_code() 
+
+@router.post("/secret/otp/verify/")
+async def check_otp(
+    otp: str,
+    db: Session = Depends(get_db),
+):
+    return {
+        "is_verified": verify_otp(otp)
     }
