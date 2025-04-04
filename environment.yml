@@ -12,8 +12,8 @@ dependencies:
   - brotli-python=1.0.9=py312h6a678d5_8
   - bzip2=1.0.8=h5eee18b_6
   - c-ares=1.19.1=h5eee18b_0
-  - ca-certificates=2024.11.26=h06a4308_0
-  - certifi=2024.8.30=py312h06a4308_0
+  - ca-certificates=2025.2.25=h06a4308_0
+  - certifi=2025.1.31=py312h06a4308_0
   - cffi=1.17.1=py312h1fdaa30_0
   - charset-normalizer=3.3.2=pyhd3eb1b0_0
   - conda=24.11.1=py312h06a4308_0
@@ -51,7 +51,7 @@ dependencies:
   - lz4-c=1.9.4=h6a678d5_1
   - menuinst=2.2.0=py312h06a4308_0
   - ncurses=6.4=h6a678d5_0
-  - openssl=3.0.15=h5eee18b_0
+  - openssl=3.0.16=h5eee18b_0
   - packaging=24.1=py312h06a4308_0
   - pcre2=10.42=hebb0a14_1
   - pip=24.2=py312h06a4308_0
@@ -234,3 +234,4 @@ dependencies:
       - websockets==15.0
       - wrapt==1.17.2
       - yarl==1.18.3
+prefix: /root/miniconda3

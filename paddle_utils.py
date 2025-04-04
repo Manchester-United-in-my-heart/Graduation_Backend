@@ -8,18 +8,82 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 import base64
+import asyncio
+from threading import Lock
+from s3_utils import download_file_from_a_nested_folder
+import os
+from dotenv import load_dotenv
+import shutil
+
+load_dotenv()
 
 layout_predictor = LayoutPredictor()
 det_predictor = DetectionPredictor()
 model = YOLO('./best (1).pt')
-# ocr = PaddleOCR(rec_model_dir='./archive/rec_added_vietnamese_char', rec_char_dict_path='./archive/vi_dict.txt', use_angle_cls=False, use_gpu=False, ocr_version="PP-OCRv3")
-# Updated at 2025-03-13 23:02
-# ocr = PaddleOCR(rec_model_dir='./archive/rec_2025_03_13_22_52', rec_char_dict_path='./archive/vi_dict.txt', use_angle_cls=False, use_gpu=False, ocr_version="PP-OCRv3")
 
-# Updated at 2025-03-16 21:31
-ocr = PaddleOCR(rec_model_dir='./archive/recognition_model_latest', rec_char_dict_path='./archive/vi_dict.txt', use_angle_cls=False, use_gpu=False, ocr_version="PP-OCRv3")
+ocr_model = None
+model_lock = Lock()
+def remove_folder(folder_path):
+    """
+    Removes a folder and its contents.
 
-async def get_prediction_from_image(image_in_rgb):
+    Args:
+        folder_path (str): The path to the folder to remove.
+    """
+    try:
+        shutil.rmtree(folder_path)  # Use shutil.rmtree for non-empty folders
+        print(f"Folder '{folder_path}' removed successfully.")
+    except FileNotFoundError:
+        print(f"Folder '{folder_path}' not found.")
+    except OSError as e:
+        print(f"Error removing folder '{folder_path}': {e}")
+
+async def load_ocr_model(model_path):
+    global ocr_model
+    try:
+      with model_lock:
+        if ocr_model is None:
+            ocr_model = PaddleOCR(rec_model_dir=model_path, rec_char_dict_path='./archive/vi_dict.txt', use_angle_cls=False, use_gpu=False, ocr_version="PP-OCRv3")
+        print("OCR model loaded successfully.")
+    except Exception as e:
+        print(f"Error loading OCR model: {e}")
+  
+async def reload_model():
+    global ocr_model
+    try:
+        with model_lock:
+          print("Downloading Weights...")
+          # Download the weights from S3
+           
+          print("Reloading OCR model...")
+          ocr_model = None
+          # remove the old model in ./archive/recognition_model_latest
+          remove_folder('./archive/recognition_model_latest')
+          os.makedirs('./archive/recognition_model_latest', exist_ok=True)
+          # download the new model to ./archive/recognition_model_latest
+          download_file_from_a_nested_folder(bucket=os.getenv("TRAINED_MODELS_BUCKET_NAME"),file_name="inference.pdiparams", key="latest/inference.pdiparams")
+          download_file_from_a_nested_folder(bucket=os.getenv("TRAINED_MODELS_BUCKET_NAME"),file_name="inference.pdmodel", key="latest/inference.pdmodel")
+          download_file_from_a_nested_folder(bucket=os.getenv("TRAINED_MODELS_BUCKET_NAME"),file_name="inference.pdiparams.info", key="latest/inference.pdiparams.info")
+          download_file_from_a_nested_folder(bucket=os.getenv("TRAINED_MODELS_BUCKET_NAME"),file_name="inference.yml", key="latest/inference.yml")
+          
+          # move the new model to ./archive/recognition_model_latest
+          os.rename('./inference.pdiparams', './archive/recognition_model_latest/inference.pdiparams')
+          os.rename('./inference.pdmodel', './archive/recognition_model_latest/inference.pdmodel')
+          os.rename('./inference.pdiparams.info', './archive/recognition_model_latest/inference.pdiparams.info')
+          os.rename('./inference.yml', './archive/recognition_model_latest/inference.yml')
+          # load the new model
+          new_model = PaddleOCR(rec_model_dir='./archive/recognition_model_latest', rec_char_dict_path='./archive/vi_dict.txt', use_angle_cls=False, use_gpu=False, ocr_version="PP-OCRv3")
+          ocr_model = new_model
+          print("OCR model reloaded successfully.")
+    except Exception as e:
+        print(f"Error reloading OCR model: {e}")
+  
+async def get_ocr_model():
+  while ocr_model is None:
+    await asyncio.sleep(0.1)
+  return ocr_model
+
+async def get_prediction_from_image_specified_model(current_model,image_in_rgb):
   image = Image.fromarray(image_in_rgb)
   layout_predictions = layout_predictor([image])
   final = ""
@@ -81,7 +145,7 @@ async def get_prediction_from_image(image_in_rgb):
             }
             # print(f"Absolute Coordinate of word: x: {x_word_absolute}, y: {y_word_absolute}, w: {w_word_absolute}, h: {h_word_absolute}")
             word = line[y_word:y_word+h_word, x_word:x_word+w_word]
-            predicted_word = ocr.ocr(word, det = False)
+            predicted_word = current_model.ocr(word, det = False)
             print(predicted_word[0][0][0])
             word_infor['texts'] = predicted_word[0][0][0]
             final += predicted_word[0][0][0] + " "

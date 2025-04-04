@@ -10,7 +10,7 @@ import os
 import shutil
 import s3_utils
 from dotenv import load_dotenv, dotenv_values 
-from paddle_utils import get_prediction_from_image
+from paddle_utils import get_ocr_model, get_prediction_from_image_specified_model
 import cv2
 import numpy as np
 import json
@@ -62,7 +62,7 @@ async def create_project(name : str = Form(...), description : str = Form(...), 
     return crud.create_project(db=db, username=current_user.username, project=project, cover_image=image_in_base64)
 
 @router.post("/{project_id}/upload_images", tags=["projects"])
-async def upload_images(project_id: int, allow_to_train: bool = False, db: Session = Depends(get_db) , files: list[UploadFile] = File(...)):
+async def upload_images_using_other_model(project_id: int, allow_to_train: bool = False, db: Session = Depends(get_db) , files: list[UploadFile] = File(...), model = Depends(get_ocr_model)):
     number_of_project_images = len(crud.get_pages_by_project_id(db, project_id))
     project_name = crud.get_project_by_id(db, project_id).name
     
@@ -76,7 +76,7 @@ async def upload_images(project_id: int, allow_to_train: bool = False, db: Sessi
         np_array = np.frombuffer(contents, np.uint8)
         image_in_bgr = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
         image_in_rgb = cv2.cvtColor(image_in_bgr, cv2.COLOR_BGR2RGB)
-        text_in_image = await get_prediction_from_image(image_in_rgb)
+        text_in_image = await get_prediction_from_image_specified_model(current_model= model,image_in_rgb=image_in_rgb)
         file_contents.append(text_in_image)
         file_name = f"{project_name}_{number_of_project_images}.png"
         file_name_without_extension = file_name.split(".")[0]

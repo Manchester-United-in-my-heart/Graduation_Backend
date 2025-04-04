@@ -3,6 +3,7 @@ import models
 from database import engine
 from routers import login, register, users, projects, published_books, secret
 from fastapi.middleware.cors import CORSMiddleware
+from paddle_utils import load_ocr_model
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -19,6 +20,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_event():
+    print("Starting up the application...")
+    await load_ocr_model("./archive/recognition_model_latest")
+    print("OCR model loaded successfully.")
 
 app.include_router(register.router)
 app.include_router(login.router)

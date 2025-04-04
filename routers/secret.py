@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import requests
 import json
 from otp_utils import get_otp_auth_string, get_qr_code, verify_otp
+from paddle_utils import reload_model
 
 load_dotenv()
  
@@ -104,55 +105,6 @@ async def start_training(
         "data": command_list
     }
 
-@router.get("/secret/replace_model")
-async def replace_model(
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    if current_user.role.value != "admin":
-        return {
-            "detail": "You are not authorized to replace the model"
-        }
-        
-    # create a new folder named "recognition_model_latest" in the local machine if not exists
-    if not os.path.exists("recognition_model_latest"):
-        os.makedirs("recognition_model_latest")
-        
-    # download the latest model from the S3 bucket
-    s3_utils.download_file_from_a_nested_folder(
-        bucket=os.getenv("TRAINED_MODELS_BUCKET_NAME"),
-        key="latest/inference.pdiparams",
-        file_name="inference.pdiparams"
-    )
-    s3_utils.download_file_from_a_nested_folder(
-        bucket=os.getenv("TRAINED_MODELS_BUCKET_NAME"),
-        key="latest/inference.pdiparams.info",
-        file_name="inference.pdiparams.info"
-    )
-    s3_utils.download_file_from_a_nested_folder(
-        bucket=os.getenv("TRAINED_MODELS_BUCKET_NAME"),
-        key="latest/inference.pdmodel",
-        file_name="inference.pdmodel"
-    )
-    s3_utils.download_file_from_a_nested_folder(
-        bucket=os.getenv("TRAINED_MODELS_BUCKET_NAME"),
-        key="latest/inference.yml",
-        file_name="inference.yml"
-    )
-
-    # move the downloaded files to the folder "recognition_model_latest"
-    os.rename("inference.pdiparams", "recognition_model_latest/inference.pdiparams")
-    os.rename("inference.pdiparams.info", "recognition_model_latest/inference.pdiparams.info")
-    os.rename("inference.pdmodel", "recognition_model_latest/inference.pdmodel")
-    os.rename("inference.yml", "recognition_model_latest/inference.yml")
-
-    # move the folder "recognition_model_latest" to ./../archive
-    os.rename("recognition_model_latest", "./../archive/recognition_model_latest")
-
-    return {
-        "message": "Model has been replaced"
-    }
-
 @router.get("/secret/dashboard_data")
 async def get_dashboard_data(
     db: Session = Depends(get_db),
@@ -186,4 +138,15 @@ async def test(
         "projects": projects_data,
         "pages": pages_data,
         "published_books": published_data
+    }
+
+@router.post("/reload_model")
+async def reload(
+    model_path: str,
+    current_user = Depends(get_current_user),
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    background_tasks.add_task(reload_model)
+    return {
+        "message": "Model reloaded successfully"
     }
